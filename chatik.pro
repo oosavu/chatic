@@ -5,8 +5,8 @@ CONFIG += c++11
 
 SOURCES += main.cpp \
     chatmanager.cpp \
-    user.cpp \
-    tinyaes.cpp
+    tinyaes.cpp \
+    userlistmodel.cpp
 
 RESOURCES += qml.qrc
 
@@ -23,5 +23,5 @@ DISTFILES += \
 
 HEADERS += \
     chatmanager.h \
-    user.h \
-    tinyaes.h
+    tinyaes.h \
+    userlistmodel.h

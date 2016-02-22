@@ -2,7 +2,7 @@ import QtQuick 2.5
 import QtQuick.Window 2.0
 import QtQuick.Controls 1.4
 import QtQuick.Layouts 1.1
-import CppImport 1.0
+//import CppImport 1.0
 Window {
     id: window
     minimumHeight: 200
@@ -65,7 +65,7 @@ Window {
         ListView {
             anchors.fill: parent
             spacing: 3
-            model: chatManager.users
+            model: userListModel//chatManager.users
             delegate: Rectangle {
                 border.color: "black"
                 height: 25

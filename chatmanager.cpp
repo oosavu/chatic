@@ -9,18 +9,18 @@ ChatManager::ChatManager(QObject *parent) : QObject(parent)
     m_timer.start(CHECK_DELAY);
     m_server.listen(QHostAddress::Any, PORT);
     m_name = "asdfasdf";
-    //m_users = QQmlListProperty<User>(this,m_usersList);
 }
 
 void ChatManager::sendMessage(QString msg, quint32 userIP)
 {
-    if(m_usersMap.contains(userIP)){
-        User* user = m_usersMap[userIP];
-        qDebug()<< "go write!";
-        user->sendSocket->write(msg.toUtf8());
-        qDebug()<< "writed!";
-    }
+//    if(m_usersMap.contains(userIP)){
+//        User* user = m_usersMap[userIP];
+//        qDebug()<< "go write!";
+//        user->sendSocket->write(msg.toUtf8());
+//        qDebug()<< "writed!";
+//    }
 }
+
 
 void ChatManager::readDatagrams()
 {
@@ -34,14 +34,18 @@ void ChatManager::readDatagrams()
         if(message.startsWith("name:")){
             if(m_usersMap.contains(senderIP)){
                 //qDebug() << "read " << m_usersMap[senderIP]->aliveDelay.elapsed();
-                m_usersMap[senderIP]->aliveDelay.restart();
+                m_usersMap[senderIP]->delay.restart();
             }
             else{
-                User* user = new User(sender);
+                User* user = new User();
+                message.truncate(5);
+                user->nickname = message;
+                user->host = sender;
+                user->ready = true;
+                //user->outSocket = new QTcpSocket();
                 m_usersMap[senderIP] = user;
+
             }
-            if(m_usersMap[senderIP]->sendSocket->state() != QAbstractSocket::ConnectedState)
-                m_usersMap[senderIP]->sendSocket->connectToHost(QHostAddress(senderIP),PORT);
         }
         qDebug() << "datagrammmm!!! " << sender.toString() << " " << QString::fromUtf8(datagram);
     }
@@ -55,7 +59,7 @@ void ChatManager::timerSlot()
 
     for (auto it = m_usersMap.begin(); it != m_usersMap.end();){
         //qDebug() << "check " <<it.value()->aliveDelay.elapsed();
-        if (it.value()->aliveDelay.elapsed() > DISCONNECT_DELAY){
+        if (it.value()->delay.elapsed() > DISCONNECT_DELAY){
             delete it.value();
             it = m_usersMap.erase(it);
         }
@@ -63,9 +67,7 @@ void ChatManager::timerSlot()
             ++it;
         }
     }
-    m_usersList = m_usersMap.values();
-    qDebug() << m_usersList.size();
-    emit usersChanged();
+    userListModel.sync(m_usersMap);
 }
 
 void ChatManager::newConnection()
@@ -73,7 +75,7 @@ void ChatManager::newConnection()
     QTcpSocket* soc = m_server.nextPendingConnection();
     quint32 ip = soc->peerAddress().toIPv4Address();
     if(m_usersMap.contains(ip)){
-        m_usersMap[ip]->receiveSocket = soc;
+        m_usersMap[ip]->inSocket = soc;
         connect(soc, SIGNAL(readyRead()),this, SLOT(readyRead()));
     }
 }
@@ -90,3 +92,19 @@ void ChatManager::readyRead()
         emit receiveMessage(soc->readAll(),ip);
     }
 }
+
+void ChatManager::setName(QString name)
+{
+    if (m_name == name)
+        return;
+
+    m_name = name;
+    emit nameChanged(name);
+}
+
+QString ChatManager::name() const
+{
+    return m_name;
+}
+
+
