@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file>main.qml</file>
+        <file>ContactList.qml</file>
+        <file>TabComponent.qml</file>
     </qresource>
 </RCC>
