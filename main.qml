@@ -5,12 +5,15 @@ import QtQuick.Layouts 1.1
 //import CppImport 1.0
 Window {
     id: window
-    minimumHeight: 200
-    minimumWidth: 300
+    minimumHeight: 300
+    minimumWidth: 600
+    width: minimumWidth
+    height: minimumHeight
     visible: true
 
     Item{
         id: chatItem
+        anchors.margins: 5
         anchors.left: parent.left
         anchors.right: contactList.left
         anchors.top: parent.top
@@ -22,16 +25,19 @@ Window {
             anchors.right: parent.right
             anchors.bottom: inputTextArea.top
             anchors.top: parent.top
+            anchors.bottomMargin: 5
         }
         TextArea{
             id: inputTextArea
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
-            width:100
+            width:50
             Keys.onEnterPressed: {
                 chatManager.sendMessage(text, userListModel.data(contactListView.currentIndex,"host"))
                 inputTextArea.text = ""
+                console.log(historyMap[0])
+                console.log(historyMap[userListModel.data(contactListView.currentIndex,"host")])
             }
         }
     }
@@ -39,44 +45,62 @@ Window {
     Connections{
         target: chatManager
         onReceiveMessage:{
+            //if(history[userIP])
+
+            userListModel.data(contactListView.currentIndex,"host")
             messageHistory.append(userListModel.data(contactListView.currentIndex,"name") + " " +
                                   Qt.formatDateTime(new Date(), "hh:mm:ss \n ") + msg + "\n")
+            //if(history[])
+            historyMap[userIP] = msg
+
         }
+
     }
 
+    property var historyMap:[]
 
 
-    Rectangle {
-        color: "red"
+
+
+    Item {
+        //color: "red"
         id: contactList
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        width: 100
+        width: 150
         ListView {
             id: contactListView
-            //property int activeHost
-            highlight: Component {
-                id: highlightBar
-                Rectangle {
-                    color: "green"
-                     width: contactListView.width
-                     height: 25
-                }
-            }
-            //onCurrentIndexChanged: activeHost =
             anchors.fill: parent
-            spacing: 3
+            anchors.margins: 5
+            spacing: 5
             model: userListModel
+            interactive: false
+//            onCurrentIndexChanged: {
+//                if(historyMap[userListModel.data(currentIndex,"name")])
+//            }
+
             delegate: Rectangle {
                 border.color: "black"
-                color: contactListView.currentIndex == index? "green": "blue"
-                height: 25
+                radius: 5
+                color: contactListView.currentIndex == index? "lightgreen": "white"
+                height: 40
                 width: contactListView.width
                 Text {
-                    text:"name" + model.name + " " + model.host
-                    anchors.verticalCenter: parent.verticalCenter
-                    x: 3
+                    text: model.ip
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.top
+                    anchors.bottom: parent.verticalCenter
+                    verticalAlignment:   Text.AlignHCenter
+                    horizontalAlignment:  Text.AlignRight
+                }
+                Text {
+                    text: model.name
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.verticalCenter
+                    anchors.bottom: parent.bottom
+                    verticalAlignment:   Text.AlignHCenter
+                    horizontalAlignment:  Text.AlignVCenter
                 }
 
                 MouseArea{

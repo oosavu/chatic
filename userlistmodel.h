@@ -36,6 +36,7 @@ struct UserData{
     quint32 host;
     UserData(QHostAddress _host, QString _nickname  = ""){
         ip = _host.toString();
+        ip.remove(0,7);
         nickname = _nickname;
         host = _host.toIPv4Address();
     }

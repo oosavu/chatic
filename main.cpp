@@ -17,6 +17,5 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("chatManager",&chatManager);
     engine.rootContext()->setContextProperty("userListModel",&(chatManager.userListModel));
     engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
-
     return app.exec();
 }

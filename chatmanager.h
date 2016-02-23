@@ -7,6 +7,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QQmlListProperty>
+#include <QNetworkInterface>
 #include "userlistmodel.h"
 
 #define PORT 8809
@@ -24,6 +25,8 @@ class ChatManager : public QObject
     QMap<quint32, User*> m_usersMap;
     QTimer m_timer;
     void addUser(QHostAddress addr, QString name);
+    bool getSelfHost();
+    QHostAddress selfHost;
 
 public:
     explicit ChatManager(QObject *parent = 0);

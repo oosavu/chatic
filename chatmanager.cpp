@@ -3,6 +3,7 @@
 
 ChatManager::ChatManager(QObject *parent) : QObject(parent)
 {
+    getSelfHost();
     m_udpSocket.bind(QHostAddress::Any, PORT);
     connect(&m_udpSocket, SIGNAL(readyRead()),this, SLOT(readDatagrams()));
     connect(&m_timer,SIGNAL(timeout()),this,SLOT(timerSlot()));
@@ -146,6 +147,18 @@ void ChatManager::addUser(QHostAddress addr, QString name)
             SLOT(outSocketError(QAbstractSocket::SocketError)));
     user->outSocket->connectToHost(addr,PORT);
     m_usersMap[senderIP] = user;
+}
+
+bool ChatManager::getSelfHost()
+{
+    foreach (const QHostAddress &address, QNetworkInterface::allAddresses()) {
+        if (address.protocol() == QAbstractSocket::IPv4Protocol && \
+                address != QHostAddress(QHostAddress::LocalHost)){
+            selfHost = address;
+            return true;
+        }
+    }
+    return false;
 }
 
 

@@ -60,18 +60,22 @@ void UserListModel::sync(QMap<quint32, User *> users)
         }
         ++it;
     }
-
-    for(int i = 0; i < m_users.size(); i++){
-        if(!users.contains(m_users[i].host) || !users[m_users[i].host]->inReady || !users[m_users[i].host]->outReady){
-            beginRemoveRows(QModelIndex(), i, i);
-            m_users.removeAt(i);
-            endRemoveRows();
+    if(m_users.size()<2){
+        beginInsertRows(QModelIndex(), rowCount(), rowCount()+1);
+        m_users.append(UserData(QHostAddress(), "me"));
+        m_users.append(UserData(QHostAddress(), "you"));
+        endInsertRows();
+    }
+    else{
+        for(int i = 0; i < m_users.size(); i++){
+            if(!users.contains(m_users[i].host) || !users[m_users[i].host]->inReady || !users[m_users[i].host]->outReady){
+                beginRemoveRows(QModelIndex(), i, i);
+                m_users.removeAt(i);
+                endRemoveRows();
+            }
         }
     }
-//    beginInsertRows(QModelIndex(), rowCount(), rowCount());
-//    //m_users.append(UserData(QHostAddress(), "me"));
-//    m_users.append(UserData(QHostAddress(), "you"));
-//    endInsertRows();
+
 }
 
 QHash<int, QByteArray> UserListModel::roleNames() const {
