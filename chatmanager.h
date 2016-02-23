@@ -9,15 +9,27 @@
 #include <QQmlListProperty>
 #include <QNetworkInterface>
 #include "userlistmodel.h"
+#include "tinyaes.h"
 
 #define PORT 8809
 #define CHECK_DELAY 1000
 #define DISCONNECT_DELAY 2000
+#define AES_KEY "587b14e9ef30e95b64dc5ec71230197a"
+
+union MsgHeader{
+    char data[12];
+    struct{
+        quint32 head; //=0xFFFFFFFF
+        quint32 length;
+        quint32 tail; //=0xFFFFFFFF
+    };
+};
 
 class ChatManager : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
+    Q_PROPERTY(QString selfIp READ selfIp NOTIFY selfIpChanged)
     QString m_name;
 
     QUdpSocket m_udpSocket;
@@ -26,7 +38,10 @@ class ChatManager : public QObject
     QTimer m_timer;
     void addUser(QHostAddress addr, QString name);
     bool getSelfHost();
-    QHostAddress selfHost;
+    QHostAddress m_selfHost;
+    QString m_selfIp;
+    TinyAES m_crypto;
+    QByteArray m_aesKey;
 
 public:
     explicit ChatManager(QObject *parent = 0);
@@ -36,9 +51,12 @@ public:
 
     UserListModel userListModel;
 
+    QString selfIp() const;
+
 signals:
     void receiveMessage(QString msg, quint32 userIP);
     void nameChanged(QString name);
+    void selfIpChanged(QString selfIp);
 
 public slots:
     void readDatagrams();

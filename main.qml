@@ -19,6 +19,12 @@ Window {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
 
+        function refresh(){
+            messageHistory.text = ""
+            inputTextArea.text = ""
+            messageHistory.append(getHistory(userListModel.data(contactListView.currentIndex,"host")))
+        }
+
         TextArea{
             id: messageHistory
             anchors.left: parent.left
@@ -26,6 +32,8 @@ Window {
             anchors.bottom: inputTextArea.top
             anchors.top: parent.top
             anchors.bottomMargin: 5
+            textFormat: TextEdit.RichText
+            readOnly: true
         }
         TextArea{
             id: inputTextArea
@@ -33,11 +41,14 @@ Window {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             width:50
-            Keys.onEnterPressed: {
+            Keys.onReturnPressed: {
+                if(inputTextArea.text.length == 0) return
                 chatManager.sendMessage(text, userListModel.data(contactListView.currentIndex,"host"))
+                var name = chatManager.name !== ""? chatManager.name: chatManager.selfIp
+                var date = Qt.formatDateTime(new Date(), "hh:mm:ss")
+                messageHistory.append("<b>[" + name + " (" + date + ")]:</b><br>" + text + "<br>")
+                appendHistory(userListModel.data(contactListView.currentIndex,"host"),text,date,name)
                 inputTextArea.text = ""
-                console.log(historyMap[0])
-                console.log(historyMap[userListModel.data(contactListView.currentIndex,"host")])
             }
         }
     }
@@ -45,25 +56,38 @@ Window {
     Connections{
         target: chatManager
         onReceiveMessage:{
-            //if(history[userIP])
-
-            userListModel.data(contactListView.currentIndex,"host")
-            messageHistory.append(userListModel.data(contactListView.currentIndex,"name") + " " +
-                                  Qt.formatDateTime(new Date(), "hh:mm:ss \n ") + msg + "\n")
-            //if(history[])
-            historyMap[userIP] = msg
-
+            var name = userListModel.data(userIP,"name") !== ""?
+                        userListModel.data(userIP,"name"):
+                        userListModel.data(userIP,"ip")
+            var date = Qt.formatDateTime(new Date(), "hh:mm:ss")
+            if(userIP === userListModel.data(contactListView.currentIndex,"host"))
+                messageHistory.append("<b>[" + name + " (" + date + ")]:</b><br>" + msg + "<br>")
+            appendHistory(userIP,msg,date,name)
+            getHistory(userListModel.data(contactListView.currentIndex,"host"))
         }
-
     }
 
     property var historyMap:[]
-
+    function appendHistory(host,_msg,_date,_sender){
+        if(historyMap[host] === undefined)
+            historyMap[host] = []
+        historyMap[host].push({date:_date,msg:_msg, sender: _sender})
+    }
+    function getHistory(host){
+        if(historyMap[host] === undefined)
+            historyMap[host] = []
+        var res = ""
+        for(var i = 0; i < historyMap[host].length; i++){
+            var message = historyMap[host][i]
+            res += "<br><b>[" + message.sender + " (" + message.date + ")]:</b><br>" +  message.msg + "<br>"
+        }
+        //console.log(res)
+        return res
+    }
 
 
 
     Item {
-        //color: "red"
         id: contactList
         anchors.right: parent.right
         anchors.top: parent.top
@@ -76,10 +100,7 @@ Window {
             spacing: 5
             model: userListModel
             interactive: false
-//            onCurrentIndexChanged: {
-//                if(historyMap[userListModel.data(currentIndex,"name")])
-//            }
-
+            onCurrentIndexChanged: chatItem.refresh()
             delegate: Rectangle {
                 border.color: "black"
                 radius: 5
@@ -95,7 +116,7 @@ Window {
                     horizontalAlignment:  Text.AlignRight
                 }
                 Text {
-                    text: model.name
+                    text: "[" + model.name + "]"
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.top: parent.verticalCenter
                     anchors.bottom: parent.bottom
@@ -108,6 +129,38 @@ Window {
                     onClicked: {
                         contactListView.currentIndex = index
                     }
+                }
+            }
+        }
+    }
+
+    Rectangle{
+        color:"lightGray"
+        anchors.fill: parent
+        id: helloScreen
+        Column{
+            anchors.centerIn: parent
+            spacing: 20
+            Label{
+//                anchors.bottom: parent.verticalCenter
+                text: "Welcome to sacred chat.\n Please enter you name:"
+            }
+            TextField{
+                maximumLength: 15
+                height: 20
+                width: 100
+                id: nameTextEdit
+                focus: true
+                Keys.onReturnPressed: {
+                    chatManager.name = nameTextEdit.text
+                    helloScreen.visible = false
+                }
+            }
+            Button{
+                text: "Join"
+                onClicked:{
+                    chatManager.name = nameTextEdit.text
+                    helloScreen.visible = false
                 }
             }
         }

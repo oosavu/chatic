@@ -15,17 +15,13 @@ struct User{
     QHostAddress host;
     bool inReady = false;
     bool outReady = false;
+    QByteArray buff;
+    int msgLength = 0;
     void deleteSockets(){
-        if(inSocket != 0){
-            //inSocket->disconnect();
-            //QObject::disconnect(inSocket,);
+        if(inSocket != 0)
             inSocket->deleteLater();
-        }
-        if(outSocket != 0){
-            //outSocket->disconnect();
-            //QObject::disconnect(outSocket);
+        if(outSocket != 0)
             outSocket->deleteLater();
-        }
     }
 
 };
@@ -36,7 +32,7 @@ struct UserData{
     quint32 host;
     UserData(QHostAddress _host, QString _nickname  = ""){
         ip = _host.toString();
-        ip.remove(0,7);
+        //ip.remove(0,7);
         nickname = _nickname;
         host = _host.toIPv4Address();
     }

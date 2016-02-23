@@ -45,9 +45,11 @@ void UserListModel::sync(QMap<quint32, User *> users)
             for(int i = 0; i < m_users.size(); i++){
                 if(it.key() == m_users[i].host){
                     if(it.value()->nickname != m_users[i].nickname){
-                        beginInsertRows(QModelIndex(), i, i+1);
+                        //beginInsertRows(QModelIndex(), i, i);
+                        beginResetModel();
                         m_users[i].nickname = it.value()->nickname;
-                        endInsertRows();
+                        //endInsertRows();
+                        endResetModel();
                     }
                     needAdd = false;
                 }
@@ -60,13 +62,13 @@ void UserListModel::sync(QMap<quint32, User *> users)
         }
         ++it;
     }
-    if(m_users.size()<2){
-        beginInsertRows(QModelIndex(), rowCount(), rowCount()+1);
-        m_users.append(UserData(QHostAddress(), "me"));
-        m_users.append(UserData(QHostAddress(), "you"));
-        endInsertRows();
-    }
-    else{
+//    if(m_users.size()<2){
+//        beginInsertRows(QModelIndex(), rowCount(), rowCount()+1);
+//        m_users.append(UserData(QHostAddress(), "me"));
+//        m_users.append(UserData(QHostAddress(), "you"));
+//        endInsertRows();
+//    }
+//    else{
         for(int i = 0; i < m_users.size(); i++){
             if(!users.contains(m_users[i].host) || !users[m_users[i].host]->inReady || !users[m_users[i].host]->outReady){
                 beginRemoveRows(QModelIndex(), i, i);
@@ -74,7 +76,7 @@ void UserListModel::sync(QMap<quint32, User *> users)
                 endRemoveRows();
             }
         }
-    }
+//    }
 
 }
 

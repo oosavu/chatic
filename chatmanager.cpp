@@ -1,9 +1,11 @@
 #include "chatmanager.h"
 
 
-ChatManager::ChatManager(QObject *parent) : QObject(parent)
+ChatManager::ChatManager(QObject *parent) : QObject(parent),
+    m_aesKey(AES_KEY)
 {
     getSelfHost();
+    m_selfIp = m_selfHost.toString();
     m_udpSocket.bind(QHostAddress::Any, PORT);
     connect(&m_udpSocket, SIGNAL(readyRead()),this, SLOT(readDatagrams()));
     connect(&m_timer,SIGNAL(timeout()),this,SLOT(timerSlot()));
@@ -24,9 +26,20 @@ void ChatManager::sendMessage(QString msg, quint32 userIP)
 {
     if(m_usersMap.contains(userIP)){
         User* user = m_usersMap[userIP];
-        user->outSocket->write(msg.toUtf8());
+        MsgHeader header;
+        header.head = 0xFFFFFFFF;
+        header.tail = 0xFFFFFFFF;
+        QByteArray data = m_crypto.Encrypt(msg.toUtf8(),m_aesKey);
+        header.length = data.length();
+        user->outSocket->write(header.data,12);
+        user->outSocket->write(data);
         user->outSocket->flush();
     }
+}
+
+QString ChatManager::selfIp() const
+{
+    return m_selfIp;
 }
 
 void ChatManager::outSocketConnected()
@@ -52,8 +65,6 @@ void ChatManager::outSocketError(QAbstractSocket::SocketError socketError)
     QTcpSocket * soc = static_cast<QTcpSocket *>(object);
     quint32 ip = soc->peerAddress().toIPv4Address();
     if(m_usersMap.contains(ip)){
-//        m_usersMap[ip]->outReady = false;
-//        soc->deleteLater();
         m_usersMap[ip]->deleteSockets();
         delete m_usersMap[ip];
         m_usersMap.remove(ip);
@@ -70,8 +81,6 @@ void ChatManager::inSocketError(QAbstractSocket::SocketError socketError)
     QTcpSocket * soc = static_cast<QTcpSocket *>(object);
     quint32 ip = soc->peerAddress().toIPv4Address();
     if( m_usersMap.contains(ip)){
-//        m_usersMap[ip]->inReady = false;
-//        soc->deleteLater();
         m_usersMap[ip]->deleteSockets();
         delete m_usersMap[ip];
         m_usersMap.remove(ip);
@@ -87,10 +96,6 @@ void ChatManager::inSocketDisconnect()
     QTcpSocket * soc = static_cast<QTcpSocket *>(object);
     quint32 ip = soc->peerAddress().toIPv4Address();
     if( m_usersMap.contains(ip)){
-//        m_usersMap[ip]->inReady = false;
-//        soc->deleteLater();
-        //m_usersMap[ip]->deleteSockets();
-//        m_usersMap[ip]->
         delete m_usersMap[ip];
         m_usersMap.remove(ip);
     }
@@ -123,8 +128,8 @@ void ChatManager::readDatagrams()
         quint32 senderIP = sender.toIPv4Address();
         if(message.startsWith("name:")){
             if(m_usersMap.contains(senderIP)){
-                //qDebug() << "read " << m_usersMap[senderIP]->aliveDelay.elapsed();
                 m_usersMap[senderIP]->delay.restart();
+                m_usersMap[senderIP]->nickname = message.remove(0,5);
             }
             else{
                 addUser(sender,message.remove(0,5));
@@ -154,7 +159,7 @@ bool ChatManager::getSelfHost()
     foreach (const QHostAddress &address, QNetworkInterface::allAddresses()) {
         if (address.protocol() == QAbstractSocket::IPv4Protocol && \
                 address != QHostAddress(QHostAddress::LocalHost)){
-            selfHost = address;
+            m_selfHost = address;
             return true;
         }
     }
@@ -170,7 +175,6 @@ void ChatManager::timerSlot()
     m_udpSocket.writeDatagram(aliveData.data(), aliveData.size(), QHostAddress::Broadcast, PORT);
 
     for (auto it = m_usersMap.begin(); it != m_usersMap.end();){
-        //qDebug() << "check " <<it.value()->aliveDelay.elapsed();
         if (it.value()->delay.elapsed() > DISCONNECT_DELAY){
             it.value()->deleteSockets();
             delete it.value();
@@ -208,7 +212,30 @@ void ChatManager::readyRead()
     QTcpSocket * soc = static_cast<QTcpSocket *>(object);
     quint32 ip = soc->peerAddress().toIPv4Address();
     if(m_usersMap.contains(ip)){
-        emit receiveMessage(soc->readAll(),ip);
+        User* user = m_usersMap[ip];
+        while(soc->bytesAvailable()>0){
+            if(user->msgLength == 0){
+                MsgHeader header;
+                soc->read(header.data,12);
+                if(header.head != 0xFFFFFFFF || header.tail != 0xFFFFFFFF){
+                    soc->disconnectFromHost();
+                    return;
+                }
+                user->msgLength = header.length;
+                user->buff.clear();
+            }
+            else{
+                if(soc->bytesAvailable() >= user->msgLength - user->buff.size()){
+                    user->buff.append(soc->read(user->msgLength - user->buff.size()));
+                    emit receiveMessage(m_crypto.Decrypt(user->buff,m_aesKey),ip);
+                    user->buff.clear();
+                    user->msgLength = 0;
+                }
+                else{
+                    user->buff.append(soc->readAll());
+                }
+            }
+        }
     }
 }
 
