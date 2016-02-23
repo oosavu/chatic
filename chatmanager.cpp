@@ -148,17 +148,6 @@ void ChatManager::addUser(QHostAddress addr, QString name)
     m_usersMap[senderIP] = user;
 }
 
-void ChatManager::disconnectSockets()
-{
-    for (auto it = m_usersMap.begin(); it != m_usersMap.end();++it){
-        if(it.value()->inSocket){
-            disconnect(it.value()->inSocket,SLOT(inSocketDisconnect()));
-        }
-        if(it.value()->outSocket){
-            disconnect(it.value()->outSocket,SLOT(outSocketDisconnect()));
-        }
-    }
-}
 
 
 void ChatManager::timerSlot()
@@ -185,6 +174,7 @@ void ChatManager::newConnection()
 {
     qDebug() <<"new connection";
     QTcpSocket* soc = m_server.nextPendingConnection();
+    soc->setParent(this);
     quint32 ip = soc->peerAddress().toIPv4Address();
     if(!m_usersMap.contains(ip))
             addUser(soc->peerAddress(),"");

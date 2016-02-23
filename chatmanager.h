@@ -24,7 +24,6 @@ class ChatManager : public QObject
     QMap<quint32, User*> m_usersMap;
     QTimer m_timer;
     void addUser(QHostAddress addr, QString name);
-    void disconnectSockets();
 
 public:
     explicit ChatManager(QObject *parent = 0);
