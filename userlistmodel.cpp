@@ -2,8 +2,7 @@
 
 UserListModel::UserListModel(QObject *parent) : QAbstractListModel(parent)
 {
-    m_users.append(UserData(QHostAddress(), "me"));
-    m_users.append(UserData(QHostAddress(), "you"));
+
 }
 
 int UserListModel::rowCount(const QModelIndex &parent) const
@@ -24,10 +23,24 @@ QVariant UserListModel::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
+QVariant UserListModel::data(int index, QString role) const
+{
+    if (index < 0 || index >= m_users.count())
+            return QVariant();
+    if (role == "ip")
+        return m_users[index].ip;
+    else if (role == "name")
+        return m_users[index].nickname;
+    else if (role == "host")
+        return m_users[index].host;
+    return QVariant();
+}
+
 void UserListModel::sync(QMap<quint32, User *> users)
 {
+    qDebug() << "sync:" << users.size();
     for (auto it = users.begin(); it != users.end();){
-        if(it.value()->ready){
+        if(it.value()->inReady && it.value()->outReady){
             bool needAdd = true;
             for(int i = 0; i < m_users.size(); i++){
                 if(it.key() == m_users[i].host){
@@ -49,12 +62,16 @@ void UserListModel::sync(QMap<quint32, User *> users)
     }
 
     for(int i = 0; i < m_users.size(); i++){
-        if(!users.contains(m_users[i].host) || !users[m_users[i].host]->ready){
+        if(!users.contains(m_users[i].host) || !users[m_users[i].host]->inReady || !users[m_users[i].host]->outReady){
             beginRemoveRows(QModelIndex(), i, i);
             m_users.removeAt(i);
             endRemoveRows();
         }
     }
+//    beginInsertRows(QModelIndex(), rowCount(), rowCount());
+//    //m_users.append(UserData(QHostAddress(), "me"));
+//    m_users.append(UserData(QHostAddress(), "you"));
+//    endInsertRows();
 }
 
 QHash<int, QByteArray> UserListModel::roleNames() const {

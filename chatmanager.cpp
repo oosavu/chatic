@@ -1,24 +1,113 @@
 #include "chatmanager.h"
 
+
 ChatManager::ChatManager(QObject *parent) : QObject(parent)
 {
     m_udpSocket.bind(QHostAddress::Any, PORT);
     connect(&m_udpSocket, SIGNAL(readyRead()),this, SLOT(readDatagrams()));
     connect(&m_timer,SIGNAL(timeout()),this,SLOT(timerSlot()));
     connect(&m_server, SIGNAL(newConnection()), this, SLOT(newConnection()));
+    connect(&m_server, SIGNAL(acceptError(QAbstractSocket::SocketError)), this,
+            SLOT(acceptError(QAbstractSocket::SocketError)));
     m_timer.start(CHECK_DELAY);
     m_server.listen(QHostAddress::Any, PORT);
-    m_name = "asdfasdf";
+    m_name = "";
+}
+
+ChatManager::~ChatManager()
+{
+
 }
 
 void ChatManager::sendMessage(QString msg, quint32 userIP)
 {
-//    if(m_usersMap.contains(userIP)){
-//        User* user = m_usersMap[userIP];
-//        qDebug()<< "go write!";
-//        user->sendSocket->write(msg.toUtf8());
-//        qDebug()<< "writed!";
-//    }
+    if(m_usersMap.contains(userIP)){
+        User* user = m_usersMap[userIP];
+        user->outSocket->write(msg.toUtf8());
+        user->outSocket->flush();
+    }
+}
+
+void ChatManager::outSocketConnected()
+{
+    qDebug() << "out socket connected";
+    QObject * object = QObject::sender();
+    if (!object)
+        return;
+    QTcpSocket * soc = static_cast<QTcpSocket *>(object);
+    quint32 ip = soc->peerAddress().toIPv4Address();
+    if(m_usersMap.contains(ip)){
+        m_usersMap[ip]->outReady = true;
+    }
+}
+
+
+void ChatManager::outSocketError(QAbstractSocket::SocketError socketError)
+{
+    qDebug() << "out socket error";
+    QObject * object = QObject::sender();
+    if (!object)
+        return;
+    QTcpSocket * soc = static_cast<QTcpSocket *>(object);
+    quint32 ip = soc->peerAddress().toIPv4Address();
+    if(m_usersMap.contains(ip)){
+//        m_usersMap[ip]->outReady = false;
+//        soc->deleteLater();
+        m_usersMap[ip]->deleteSockets();
+        delete m_usersMap[ip];
+        m_usersMap.remove(ip);
+
+    }
+}
+
+void ChatManager::inSocketError(QAbstractSocket::SocketError socketError)
+{
+    qDebug() << "in socket connected";
+    QObject * object = QObject::sender();
+    if (!object)
+        return;
+    QTcpSocket * soc = static_cast<QTcpSocket *>(object);
+    quint32 ip = soc->peerAddress().toIPv4Address();
+    if( m_usersMap.contains(ip)){
+//        m_usersMap[ip]->inReady = false;
+//        soc->deleteLater();
+        m_usersMap[ip]->deleteSockets();
+        delete m_usersMap[ip];
+        m_usersMap.remove(ip);
+    }
+}
+
+void ChatManager::inSocketDisconnect()
+{
+    qDebug() << " in cocket disconnected ";
+    QObject * object = QObject::sender();
+    if (!object)
+        return;
+    QTcpSocket * soc = static_cast<QTcpSocket *>(object);
+    quint32 ip = soc->peerAddress().toIPv4Address();
+    if( m_usersMap.contains(ip)){
+//        m_usersMap[ip]->inReady = false;
+//        soc->deleteLater();
+        //m_usersMap[ip]->deleteSockets();
+//        m_usersMap[ip]->
+        delete m_usersMap[ip];
+        m_usersMap.remove(ip);
+    }
+}
+
+void ChatManager::outSocketDisconnect()
+{
+    qDebug() << " out cocket disconnected ";
+    QObject * object = QObject::sender();
+    if (!object)
+        return;
+    QTcpSocket * soc = static_cast<QTcpSocket *>(object);
+    quint32 ip = soc->peerAddress().toIPv4Address();
+    if(m_usersMap.contains(ip)){
+        m_usersMap[ip]->deleteSockets();
+        delete m_usersMap[ip];
+        m_usersMap.remove(ip);
+    }
 }
 
 
@@ -37,18 +126,40 @@ void ChatManager::readDatagrams()
                 m_usersMap[senderIP]->delay.restart();
             }
             else{
-                User* user = new User();
-                user->nickname = message.right(5);
-                user->host = sender;
-                user->ready = true;
-                //user->outSocket = new QTcpSocket();
-                m_usersMap[senderIP] = user;
-
+                addUser(sender,message.remove(0,5));
             }
         }
         qDebug() << "datagrammmm!!! " << sender.toString() << " " << QString::fromUtf8(datagram);
     }
 }
+
+
+void ChatManager::addUser(QHostAddress addr, QString name)
+{
+    quint32 senderIP = addr.toIPv4Address();
+    User* user = new User();
+    user->nickname =name;
+    user->host = addr;
+    user->outSocket = new QTcpSocket();
+    connect(user->outSocket, SIGNAL(connected()), this, SLOT(outSocketConnected()));
+    connect(user->outSocket, SIGNAL(error(QAbstractSocket::SocketError)),this,
+            SLOT(outSocketError(QAbstractSocket::SocketError)));
+    user->outSocket->connectToHost(addr,PORT);
+    m_usersMap[senderIP] = user;
+}
+
+void ChatManager::disconnectSockets()
+{
+    for (auto it = m_usersMap.begin(); it != m_usersMap.end();++it){
+        if(it.value()->inSocket){
+            disconnect(it.value()->inSocket,SLOT(inSocketDisconnect()));
+        }
+        if(it.value()->outSocket){
+            disconnect(it.value()->outSocket,SLOT(outSocketDisconnect()));
+        }
+    }
+}
+
 
 void ChatManager::timerSlot()
 {
@@ -59,6 +170,7 @@ void ChatManager::timerSlot()
     for (auto it = m_usersMap.begin(); it != m_usersMap.end();){
         //qDebug() << "check " <<it.value()->aliveDelay.elapsed();
         if (it.value()->delay.elapsed() > DISCONNECT_DELAY){
+            it.value()->deleteSockets();
             delete it.value();
             it = m_usersMap.erase(it);
         }
@@ -71,25 +183,35 @@ void ChatManager::timerSlot()
 
 void ChatManager::newConnection()
 {
+    qDebug() <<"new connection";
     QTcpSocket* soc = m_server.nextPendingConnection();
     quint32 ip = soc->peerAddress().toIPv4Address();
-    if(m_usersMap.contains(ip)){
-        m_usersMap[ip]->inSocket = soc;
-        connect(soc, SIGNAL(readyRead()),this, SLOT(readyRead()));
-    }
+    if(!m_usersMap.contains(ip))
+            addUser(soc->peerAddress(),"");
+    m_usersMap[ip]->inSocket = soc;
+    m_usersMap[ip]->inReady = true;
+    connect(soc, SIGNAL(readyRead()),this, SLOT(readyRead()));
+    connect(soc, SIGNAL(error(QAbstractSocket::SocketError)),this,
+            SLOT(inSocketError(QAbstractSocket::SocketError)));
+    connect(soc, SIGNAL(disconnected()),this, SLOT(inSocketDisconnect()));
 }
 
 void ChatManager::readyRead()
 {
     QObject * object = QObject::sender();
+    qDebug() <<"receive message";
     if (!object)
         return;
     QTcpSocket * soc = static_cast<QTcpSocket *>(object);
     quint32 ip = soc->peerAddress().toIPv4Address();
     if(m_usersMap.contains(ip)){
-        //qDebug() <<"receive"<< soc->readAll();
         emit receiveMessage(soc->readAll(),ip);
     }
+}
+
+void ChatManager::acceptError(QAbstractSocket::SocketError socketError)
+{
+    qDebug() <<"server accept error";
 }
 
 void ChatManager::setName(QString name)
@@ -100,6 +222,8 @@ void ChatManager::setName(QString name)
     m_name = name;
     emit nameChanged(name);
 }
+
+
 
 QString ChatManager::name() const
 {

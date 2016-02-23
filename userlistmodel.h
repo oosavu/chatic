@@ -4,6 +4,7 @@
 #include <QAbstractListModel>
 #include <QHostAddress>
 #include <QTcpServer>
+#include <QTcpSocket>
 #include <QTime>
 
 struct User{
@@ -12,7 +13,21 @@ struct User{
     QTcpSocket* outSocket = 0;
     QTime delay;
     QHostAddress host;
-    bool ready = false;
+    bool inReady = false;
+    bool outReady = false;
+    void deleteSockets(){
+        if(inSocket != 0){
+            //inSocket->disconnect();
+            //QObject::disconnect(inSocket,);
+            inSocket->deleteLater();
+        }
+        if(outSocket != 0){
+            //outSocket->disconnect();
+            //QObject::disconnect(outSocket);
+            outSocket->deleteLater();
+        }
+    }
+
 };
 
 struct UserData{
@@ -33,6 +48,7 @@ public:
     explicit UserListModel(QObject *parent = 0);
     int rowCount(const QModelIndex & parent = QModelIndex()) const;
     QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const;
+    Q_INVOKABLE QVariant data(int index, QString role ) const;
     enum UserRoles {
         IpRole = Qt::UserRole + 1,
         NameRole,

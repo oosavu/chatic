@@ -23,9 +23,12 @@ class ChatManager : public QObject
     QTcpServer m_server;
     QMap<quint32, User*> m_usersMap;
     QTimer m_timer;
+    void addUser(QHostAddress addr, QString name);
+    void disconnectSockets();
 
 public:
     explicit ChatManager(QObject *parent = 0);
+    ~ChatManager();
     QString name() const;
     Q_INVOKABLE void sendMessage(QString msg, quint32 userIP);
 
@@ -40,7 +43,13 @@ public slots:
     void timerSlot();
     void newConnection();
     void readyRead();
+    void acceptError(QAbstractSocket::SocketError socketError);
     void setName(QString name);
+    void outSocketConnected();
+    void outSocketError(QAbstractSocket::SocketError socketError);
+    void inSocketError(QAbstractSocket::SocketError socketError);
+    void inSocketDisconnect();
+    void outSocketDisconnect();
 };
 
 

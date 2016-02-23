@@ -9,47 +9,29 @@ Window {
     minimumWidth: 300
     visible: true
 
-    TabView{
-        id: chatTabView
+    Item{
+        id: chatItem
         anchors.left: parent.left
         anchors.right: contactList.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-//        Tab{
-//            title: "red"
-//            Rectangle{color: "red"}
-//        }
 
-    }
-
-    Component{
-        id: chatComponent
-
-        Item {
-            property int host: 123
-
-
-            TextArea{
-                id: messageHistory
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: inputTextArea.top
-                anchors.top: parent.top
-            }
-            TextArea{
-                id: inputTextArea
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                width:100
-                Keys.onEnterPressed: {
-                    chatManager.sendMessage(text, ip)
-                    inputTextArea.text = ""
-                }
-            }
-            Text{
-                anchors.centerIn: parent
-                text: host
+        TextArea{
+            id: messageHistory
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: inputTextArea.top
+            anchors.top: parent.top
+        }
+        TextArea{
+            id: inputTextArea
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            width:100
+            Keys.onEnterPressed: {
+                chatManager.sendMessage(text, userListModel.data(contactListView.currentIndex,"host"))
+                inputTextArea.text = ""
             }
         }
     }
@@ -57,21 +39,12 @@ Window {
     Connections{
         target: chatManager
         onReceiveMessage:{
-            chatTabView.getTab(0).messageHistory.append(msg)
+            messageHistory.append(userListModel.data(contactListView.currentIndex,"name") + " " +
+                                  Qt.formatDateTime(new Date(), "hh:mm:ss \n ") + msg + "\n")
         }
     }
 
-    function getTabIndexForHost(host){
-        console.log("gti. count"+chatTabView.count )
-        for(var i = 0; i < chatTabView.count; i++){
-            console.log(chatTabView.getTab(i),chatTabView.getTab(i).item.host)
-            if(chatTabView.getTab(i).item.host === host ){
-                console.log("jkgyjk" + i.toString())
-                return i
-            }
-        }
-        return -1
-    }
+
 
     Rectangle {
         color: "red"
@@ -81,15 +54,27 @@ Window {
         anchors.bottom: parent.bottom
         width: 100
         ListView {
+            id: contactListView
+            //property int activeHost
+            highlight: Component {
+                id: highlightBar
+                Rectangle {
+                    color: "green"
+                     width: contactListView.width
+                     height: 25
+                }
+            }
+            //onCurrentIndexChanged: activeHost =
             anchors.fill: parent
             spacing: 3
-            model: userListModel//chatManager.users
+            model: userListModel
             delegate: Rectangle {
                 border.color: "black"
+                color: contactListView.currentIndex == index? "green": "blue"
                 height: 25
-                width: 50
+                width: contactListView.width
                 Text {
-                    text:"name" + model.name
+                    text:"name" + model.name + " " + model.host
                     anchors.verticalCenter: parent.verticalCenter
                     x: 3
                 }
@@ -97,14 +82,7 @@ Window {
                 MouseArea{
                     anchors.fill: parent
                     onClicked: {
-//                        console.log("add" + getTabIndexForHost(model.host))
-//                        if(getTabIndexForHost(model.host) === -1){
-                            chatTabView.addTab(model.name,chatComponent)
-                            chatTabView.getTab(chatTabView.count-1).active = true
-//                            chatTabView.getTab(chatTabView.count-1).item.host = model.host;
-//                        }
-//                        console.log("now" + getTabIndexForHost(model.host))
-//                        chatTabView.currentIndex = getTabIndexForHost(model.host)
+                        contactListView.currentIndex = index
                     }
                 }
             }
