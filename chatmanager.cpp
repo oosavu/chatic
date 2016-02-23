@@ -17,15 +17,12 @@ ChatManager::ChatManager(QObject *parent) : QObject(parent),
     m_name = "";
 }
 
-ChatManager::~ChatManager()
-{
-
-}
 
 void ChatManager::sendMessage(QString msg, quint32 userIP)
 {
     if(m_usersMap.contains(userIP)){
         User* user = m_usersMap[userIP];
+        //заполнение заголовка "пакета" и кодирование содержания
         MsgHeader header;
         header.head = 0xFFFFFFFF;
         header.tail = 0xFFFFFFFF;
@@ -45,10 +42,10 @@ QString ChatManager::selfIp() const
 void ChatManager::outSocketConnected()
 {
     qDebug() << "out socket connected";
-    QObject * object = QObject::sender();
+    QObject *object = QObject::sender();
     if (!object)
         return;
-    QTcpSocket * soc = static_cast<QTcpSocket *>(object);
+    QTcpSocket *soc = static_cast<QTcpSocket *>(object);
     quint32 ip = soc->peerAddress().toIPv4Address();
     if(m_usersMap.contains(ip)){
         m_usersMap[ip]->outReady = true;
@@ -59,26 +56,25 @@ void ChatManager::outSocketConnected()
 void ChatManager::outSocketError(QAbstractSocket::SocketError socketError)
 {
     qDebug() << "out socket error";
-    QObject * object = QObject::sender();
+    QObject *object = QObject::sender();
     if (!object)
         return;
-    QTcpSocket * soc = static_cast<QTcpSocket *>(object);
+    QTcpSocket *soc = static_cast<QTcpSocket *>(object);
     quint32 ip = soc->peerAddress().toIPv4Address();
     if(m_usersMap.contains(ip)){
         m_usersMap[ip]->deleteSockets();
         delete m_usersMap[ip];
         m_usersMap.remove(ip);
-
     }
 }
 
 void ChatManager::inSocketError(QAbstractSocket::SocketError socketError)
 {
     qDebug() << "in socket connected";
-    QObject * object = QObject::sender();
+    QObject *object = QObject::sender();
     if (!object)
         return;
-    QTcpSocket * soc = static_cast<QTcpSocket *>(object);
+    QTcpSocket *soc = static_cast<QTcpSocket *>(object);
     quint32 ip = soc->peerAddress().toIPv4Address();
     if( m_usersMap.contains(ip)){
         m_usersMap[ip]->deleteSockets();
@@ -107,7 +103,7 @@ void ChatManager::outSocketDisconnect()
     QObject * object = QObject::sender();
     if (!object)
         return;
-    QTcpSocket * soc = static_cast<QTcpSocket *>(object);
+    QTcpSocket *soc = static_cast<QTcpSocket *>(object);
     quint32 ip = soc->peerAddress().toIPv4Address();
     if(m_usersMap.contains(ip)){
         m_usersMap[ip]->deleteSockets();
@@ -135,7 +131,7 @@ void ChatManager::readDatagrams()
                 addUser(sender,message.remove(0,5));
             }
         }
-        qDebug() << "datagrammmm!!! " << sender.toString() << " " << QString::fromUtf8(datagram);
+        qDebug() << "datagram!!! " << sender.toString() << " " << QString::fromUtf8(datagram);
     }
 }
 

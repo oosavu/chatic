@@ -17,9 +17,7 @@ QML_IMPORT_PATH =
 include(deployment.pri)
 
 DISTFILES += \
-    ContactList.qml\
-    main.qml \
-    TabComponent.qml
+    main.qml
 
 HEADERS += \
     chatmanager.h \

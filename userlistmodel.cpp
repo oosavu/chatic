@@ -36,14 +36,24 @@ QVariant UserListModel::data(int index, QString role) const
     return QVariant();
 }
 
+QVariant UserListModel::getIndex(quint32 host) const
+{
+    for(int i = 0; i < m_users.size(); i++)
+        if(host == m_users[i].host)
+            return i;
+    return -1;
+}
+
 void UserListModel::sync(QMap<quint32, User *> users)
 {
-    qDebug() << "sync:" << users.size();
     for (auto it = users.begin(); it != users.end();){
+        //если открыты оба соединения
         if(it.value()->inReady && it.value()->outReady){
             bool needAdd = true;
+            //то смотрим, есть ли он уже в списке
             for(int i = 0; i < m_users.size(); i++){
                 if(it.key() == m_users[i].host){
+                    //Если да, то возможно у него новое имя
                     if(it.value()->nickname != m_users[i].nickname){
                         //beginInsertRows(QModelIndex(), i, i);
                         beginResetModel();
@@ -54,6 +64,7 @@ void UserListModel::sync(QMap<quint32, User *> users)
                     needAdd = false;
                 }
             }
+            //Если нет, то добавляем его
             if(needAdd){
                 beginInsertRows(QModelIndex(), rowCount(), rowCount());
                 m_users.append(UserData(it.value()->host,it.value()->nickname));
@@ -62,21 +73,14 @@ void UserListModel::sync(QMap<quint32, User *> users)
         }
         ++it;
     }
-//    if(m_users.size()<2){
-//        beginInsertRows(QModelIndex(), rowCount(), rowCount()+1);
-//        m_users.append(UserData(QHostAddress(), "me"));
-//        m_users.append(UserData(QHostAddress(), "you"));
-//        endInsertRows();
-//    }
-//    else{
-        for(int i = 0; i < m_users.size(); i++){
-            if(!users.contains(m_users[i].host) || !users[m_users[i].host]->inReady || !users[m_users[i].host]->outReady){
-                beginRemoveRows(QModelIndex(), i, i);
-                m_users.removeAt(i);
-                endRemoveRows();
-            }
+    //Проверяем, есть ли те, кто стал оффлайн
+    for(int i = 0; i < m_users.size(); i++){
+        if(!users.contains(m_users[i].host) || !users[m_users[i].host]->inReady || !users[m_users[i].host]->outReady){
+            beginRemoveRows(QModelIndex(), i, i);
+            m_users.removeAt(i);
+            endRemoveRows();
         }
-//    }
+    }
 
 }
 

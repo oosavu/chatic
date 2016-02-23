@@ -19,6 +19,8 @@ Window {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
 
+        //Вызывается при выборе пользователя из списка. очищает поля истории и набора сообщения,
+        //Восстанавливает историю для выбраного пользователя
         function refresh(){
             messageHistory.text = ""
             inputTextArea.text = ""
@@ -35,18 +37,22 @@ Window {
             textFormat: TextEdit.RichText
             readOnly: true
         }
+
         TextArea{
             id: inputTextArea
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
-            width:50
+            width:35
             Keys.onReturnPressed: {
                 if(inputTextArea.text.length == 0) return
+                //Отправка сообщения по сети
                 chatManager.sendMessage(text, userListModel.data(contactListView.currentIndex,"host"))
+                //вывод сообщения на экран
                 var name = chatManager.name !== ""? chatManager.name: chatManager.selfIp
                 var date = Qt.formatDateTime(new Date(), "hh:mm:ss")
                 messageHistory.append("<b>[" + name + " (" + date + ")]:</b><br>" + text + "<br>")
+                //сохранение в истории сообщений
                 appendHistory(userListModel.data(contactListView.currentIndex,"host"),text,date,name)
                 inputTextArea.text = ""
             }
@@ -55,24 +61,31 @@ Window {
 
     Connections{
         target: chatManager
+        //Получение новго сообщения.
         onReceiveMessage:{
-            var name = userListModel.data(userIP,"name") !== ""?
-                        userListModel.data(userIP,"name"):
-                        userListModel.data(userIP,"ip")
+            //Проверка, есть ли еще данный пользователь в списке
+            var modInd = userListModel.getIndex(userIP)
+            if(modInd === -1) return
+            var name = userListModel.data(modInd,"name") !== ""?
+                        userListModel.data(modInd,"name"):
+                        userListModel.data(modInd,"ip")
             var date = Qt.formatDateTime(new Date(), "hh:mm:ss")
+            //Если в данный момент идёт диалог с ним, то выводим на экран
             if(userIP === userListModel.data(contactListView.currentIndex,"host"))
                 messageHistory.append("<b>[" + name + " (" + date + ")]:</b><br>" + msg + "<br>")
             appendHistory(userIP,msg,date,name)
-            getHistory(userListModel.data(contactListView.currentIndex,"host"))
         }
     }
 
+    //json-свойство для хранения истории переписки.
     property var historyMap:[]
+    //добавление сообщения в историю
     function appendHistory(host,_msg,_date,_sender){
         if(historyMap[host] === undefined)
             historyMap[host] = []
         historyMap[host].push({date:_date,msg:_msg, sender: _sender})
     }
+    //восстановление теста из истории
     function getHistory(host){
         if(historyMap[host] === undefined)
             historyMap[host] = []
@@ -86,7 +99,7 @@ Window {
     }
 
 
-
+    //Отображение списка сонтактов
     Item {
         id: contactList
         anchors.right: parent.right
@@ -134,6 +147,7 @@ Window {
         }
     }
 
+    //Экран приветствия
     Rectangle{
         color:"lightGray"
         anchors.fill: parent
@@ -142,7 +156,6 @@ Window {
             anchors.centerIn: parent
             spacing: 20
             Label{
-//                anchors.bottom: parent.verticalCenter
                 text: "Welcome to sacred chat.\n Please enter you name:"
             }
             TextField{
