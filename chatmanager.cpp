@@ -38,8 +38,7 @@ void ChatManager::readDatagrams()
             }
             else{
                 User* user = new User();
-                message.truncate(5);
-                user->nickname = message;
+                user->nickname = message.right(5);
                 user->host = sender;
                 user->ready = true;
                 //user->outSocket = new QTcpSocket();

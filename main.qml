@@ -15,10 +15,10 @@ Window {
         anchors.right: contactList.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        Tab{
-            title: "red"
-            Rectangle{color: "red"}
-        }
+//        Tab{
+//            title: "red"
+//            Rectangle{color: "red"}
+//        }
 
     }
 
@@ -26,7 +26,9 @@ Window {
         id: chatComponent
 
         Item {
-            property int ip
+            property int host: 123
+
+
             TextArea{
                 id: messageHistory
                 anchors.left: parent.left
@@ -45,6 +47,10 @@ Window {
                     inputTextArea.text = ""
                 }
             }
+            Text{
+                anchors.centerIn: parent
+                text: host
+            }
         }
     }
 
@@ -53,6 +59,18 @@ Window {
         onReceiveMessage:{
             chatTabView.getTab(0).messageHistory.append(msg)
         }
+    }
+
+    function getTabIndexForHost(host){
+        console.log("gti. count"+chatTabView.count )
+        for(var i = 0; i < chatTabView.count; i++){
+            console.log(chatTabView.getTab(i),chatTabView.getTab(i).item.host)
+            if(chatTabView.getTab(i).item.host === host ){
+                console.log("jkgyjk" + i.toString())
+                return i
+            }
+        }
+        return -1
     }
 
     Rectangle {
@@ -71,16 +89,22 @@ Window {
                 height: 25
                 width: 50
                 Text {
-                    text:"name" + name
+                    text:"name" + model.name
                     anchors.verticalCenter: parent.verticalCenter
                     x: 3
                 }
+
                 MouseArea{
                     anchors.fill: parent
                     onClicked: {
-                        var tab = chatTabView.addTab(name,chatComponent)
-                        tab.ip = 123
-
+//                        console.log("add" + getTabIndexForHost(model.host))
+//                        if(getTabIndexForHost(model.host) === -1){
+                            chatTabView.addTab(model.name,chatComponent)
+                            chatTabView.getTab(chatTabView.count-1).active = true
+//                            chatTabView.getTab(chatTabView.count-1).item.host = model.host;
+//                        }
+//                        console.log("now" + getTabIndexForHost(model.host))
+//                        chatTabView.currentIndex = getTabIndexForHost(model.host)
                     }
                 }
             }

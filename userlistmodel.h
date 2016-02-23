@@ -35,7 +35,8 @@ public:
     QVariant data(const QModelIndex & index, int role = Qt::DisplayRole) const;
     enum UserRoles {
         IpRole = Qt::UserRole + 1,
-        NameRole
+        NameRole,
+        HostRole
     };
 
     void sync(QMap<quint32, User*> users);

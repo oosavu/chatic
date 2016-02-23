@@ -19,6 +19,8 @@ QVariant UserListModel::data(const QModelIndex &index, int role) const
         return m_users[index.row()].ip;
     else if (role == NameRole)
         return m_users[index.row()].nickname;
+    else if (role == HostRole)
+        return m_users[index.row()].host;
     return QVariant();
 }
 
@@ -59,5 +61,6 @@ QHash<int, QByteArray> UserListModel::roleNames() const {
     QHash<int, QByteArray> roles;
     roles[IpRole] = "ip";
     roles[NameRole] = "name";
+    roles[HostRole] = "host";
     return roles;
 }
